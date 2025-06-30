@@ -1,3 +1,6 @@
+
+
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -11,7 +14,7 @@ PORTAL_EXCEL = "portal_atendimentos_clientes.xlsx"  # ou o nome correto do seu a
 PORTAL_OS_LIST = "portal_atendimentos_os_list.json" # ou o nome correto da lista de OS (caso use JSON, por exemplo)
 
 
-st.set_page_config(page_title="BARUERI || Otimização Rotas Vavivê", layout="wide")
+st.set_page_config(page_title="BELO HORIZONTE || Otimização Rotas Vavivê", layout="wide")
 
 ACEITES_FILE = "aceites.xlsx"
 ROTAS_FILE = "rotas_bh_dados_tratados_completos.xlsx"
@@ -798,7 +801,7 @@ if not st.session_state.admin_autenticado:
     st.markdown("""
         <div style='display:flex;align-items:center;gap:16px'>
             <img src='https://i.imgur.com/gIhC0fC.png' height='48'>
-            <span style='font-size:1.7em;font-weight:700;color:#18d96b;letter-spacing:1px;'>BARUERI || PORTAL DE ATENDIMENTOS</span>
+            <span style='font-size:1.7em;font-weight:700;color:#18d96b;letter-spacing:1px;'>BELO HORIZONTE || PORTAL DE ATENDIMENTOS</span>
         </div>
         <p style='color:#666;font-size:1.08em;margin:8px 0 18px 0'>
             Consulte abaixo os atendimentos disponíveis!
@@ -888,7 +891,7 @@ if not st.session_state.admin_autenticado:
 
 
 # Se autenticado, agora sim mostra TODAS as abas normalmente!
-tabs = st.tabs([ "Portal Atendimentos", "Upload de Arquivo", "Matriz de Rotas", "Aceites"])
+tabs = st.tabs(["Portal Atendimentos", "Upload de Arquivo", "Matriz de Rotas", "Aceites", "Profissionais Próximos", "Mensagem Rápida"])
 
 with tabs[1]:
 
@@ -1058,7 +1061,7 @@ with tabs[0]:
     st.markdown("""
         <div style='display:flex;align-items:center;gap:16px'>
             <img src='https://i.imgur.com/gIhC0fC.png' height='48'>
-            <span style='font-size:1.7em;font-weight:700;color:#18d96b;letter-spacing:1px;'>BARUERI || PORTAL DE ATENDIMENTOS</span>
+            <span style='font-size:1.7em;font-weight:700;color:#18d96b;letter-spacing:1px;'>BELO HORIZONTE || PORTAL DE ATENDIMENTOS</span>
         </div>
         <p style='color:#666;font-size:1.08em;margin:8px 0 18px 0'>
             Consulte abaixo os atendimentos disponíveis!
@@ -1203,3 +1206,61 @@ with tabs[0]:
 
         else:
             st.info("Nenhum atendimento disponível. Aguarde liberação do admin.")
+
+with tabs[4]:
+        st.subheader("Buscar Profissionais Próximos")
+        lat = st.number_input("Latitude", value=-19.9, format="%.6f")
+        lon = st.number_input("Longitude", value=-43.9, format="%.6f")
+        n = st.number_input("Qtd. profissionais", min_value=1, value=5, step=1)
+        if st.button("Buscar"):
+            # Usa o df_profissionais já tratado do pipeline
+            if os.path.exists(ROTAS_FILE):
+                df_profissionais = pd.read_excel(ROTAS_FILE, sheet_name="Profissionais")
+                mask_inativo_nome = df_profissionais['Nome Prestador'].astype(str).str.contains('inativo', case=False, na=False)
+                df_profissionais = df_profissionais[~mask_inativo_nome]
+                df_profissionais = df_profissionais.dropna(subset=['Latitude Profissional', 'Longitude Profissional'])
+                input_coords = (lat, lon)
+                df_profissionais['Distância_km'] = df_profissionais.apply(
+                    lambda row: geodesic(input_coords, (row['Latitude Profissional'], row['Longitude Profissional'])).km, axis=1
+                )
+                df_melhores = df_profissionais.sort_values('Distância_km').head(int(n))
+                st.dataframe(df_melhores[['Nome Prestador', 'Celular', 'Qtd Atendimentos', 'Latitude Profissional', 'Longitude Profissional', 'Distância_km']])
+            else:
+                st.info("Faça upload e processamento do arquivo para habilitar a busca.")
+    
+# Aba "Mensagem Rápida"
+with tabs[5]:
+    st.subheader("Gerar Mensagem Rápida WhatsApp")
+    os_id = st.text_input("Código da OS* (Bairro + Serviço) (obrigatório)", max_chars=12)
+    data = st.text_input("Data do Atendimento (ex: 20/06/2025)")
+    bairro = st.text_input("Bairro")
+    servico = st.text_input("Serviço")
+    hora_entrada = st.text_input("Hora de entrada (ex: 08:00)")
+    duracao = st.text_input("Duração do atendimento (ex: 2h)")
+
+    app_url = "https://rotasvavivebarueri.streamlit.app"  # sua URL real
+    if os_id.strip():
+        link_aceite = f"{app_url}?aceite={os_id}&origem=mensagem_rapida"
+    else:
+        link_aceite = ""
+
+    if st.button("Gerar Mensagem"):
+        if not os_id.strip():
+            st.error("Preencha o código da OS!")
+        else:
+            mensagem = (
+                "🚨🚨🚨\n"
+                "     *Oportunidade Relâmpago*\n"
+                "                              🚨🚨🚨\n\n"
+                f"Olá, tudo bem com você?\n\n"
+                f"*Data:* {data}\n"
+                f"*Bairro:* {bairro}\n"
+                f"*Serviço:* {servico}\n"
+                f"*Hora de entrada:* {hora_entrada}\n"
+                f"*Duração do atendimento:* {duracao}\n\n"
+                f"👉 Para aceitar ou recusar, acesse: {link_aceite}\n\n"
+                "Se tiver interesse, por favor, nos avise!"
+            )
+            st.text_area("Mensagem WhatsApp", value=mensagem, height=260)
+
+
