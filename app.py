@@ -1,6 +1,3 @@
-
-
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -14,7 +11,7 @@ PORTAL_EXCEL = "portal_atendimentos_clientes.xlsx"  # ou o nome correto do seu a
 PORTAL_OS_LIST = "portal_atendimentos_os_list.json" # ou o nome correto da lista de OS (caso use JSON, por exemplo)
 
 
-st.set_page_config(page_title="BELO HORIZONTE || Otimização Rotas Vavivê", layout="wide")
+st.set_page_config(page_title="BARUERI || Otimização Rotas Vavivê", layout="wide")
 
 ACEITES_FILE = "aceites.xlsx"
 ROTAS_FILE = "rotas_bh_dados_tratados_completos.xlsx"
@@ -801,7 +798,7 @@ if not st.session_state.admin_autenticado:
     st.markdown("""
         <div style='display:flex;align-items:center;gap:16px'>
             <img src='https://i.imgur.com/gIhC0fC.png' height='48'>
-            <span style='font-size:1.7em;font-weight:700;color:#18d96b;letter-spacing:1px;'>BELO HORIZONTE || PORTAL DE ATENDIMENTOS</span>
+            <span style='font-size:1.7em;font-weight:700;color:#18d96b;letter-spacing:1px;'>BARUERI || PORTAL DE ATENDIMENTOS</span>
         </div>
         <p style='color:#666;font-size:1.08em;margin:8px 0 18px 0'>
             Consulte abaixo os atendimentos disponíveis!
@@ -1061,7 +1058,7 @@ with tabs[0]:
     st.markdown("""
         <div style='display:flex;align-items:center;gap:16px'>
             <img src='https://i.imgur.com/gIhC0fC.png' height='48'>
-            <span style='font-size:1.7em;font-weight:700;color:#18d96b;letter-spacing:1px;'>BELO HORIZONTE || PORTAL DE ATENDIMENTOS</span>
+            <span style='font-size:1.7em;font-weight:700;color:#18d96b;letter-spacing:1px;'>BARUERI || PORTAL DE ATENDIMENTOS</span>
         </div>
         <p style='color:#666;font-size:1.08em;margin:8px 0 18px 0'>
             Consulte abaixo os atendimentos disponíveis!
@@ -1262,5 +1259,3 @@ with tabs[5]:
                 "Se tiver interesse, por favor, nos avise!"
             )
             st.text_area("Mensagem WhatsApp", value=mensagem, height=260)
-
-
