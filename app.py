@@ -1063,6 +1063,22 @@ with tabs[3]:
 
 import json
 import urllib.parse
+# Tente configurar o locale (pode ser ignorado se não funcionar)
+try:
+    locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')
+except:
+    pass
+
+def formatar_data_portugues(data):
+    if pd.isnull(data) or data == "":
+        return ""
+    try:
+        dt = pd.to_datetime(data, dayfirst=True, errors='coerce')
+        if pd.isnull(dt):
+            return str(data)
+        return dt.strftime("%A, %d/%m/%Y").capitalize()
+    except Exception:
+        return str(data)
 
 with tabs[0]:
     st.markdown("""
@@ -1157,7 +1173,7 @@ with tabs[0]:
                     servico = row.get("Serviço", "")
                     nome_cliente = row.get("Cliente", "")
                     bairro = row.get("Bairro", "")
-                    data = row.get("Data 1", "")
+                    data = formatar_data_portugues(row.get("Data 1", ""))
                     hora_entrada = row.get("Hora de entrada", "")
                     hora_servico = row.get("Horas de serviço", "")
                     referencia = row.get("Ponto de Referencia", "")
