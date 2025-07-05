@@ -1,3 +1,5 @@
+
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -27,17 +29,16 @@ def exibe_formulario_aceite(os_id):
 
     with col1:
         if st.button("Sim, aceito este atendimento"):
-            salvar_aceite(os_id, profissional, telefone, True)
+            salvar_aceite(os_id, profissional, telefone, True, origem=origem)
             resposta.success("✅ Obrigado! Seu aceite foi registrado com sucesso. Em breve daremos retorno sobre o atendimento!")
             aceite_submetido = True
 
     with col2:
         if st.button("Não posso aceitar"):
-            salvar_aceite(os_id, profissional, telefone, False)
+            salvar_aceite(os_id, profissional, telefone, False, origem=origem)
             resposta.success("✅ Obrigado! Fique de olho em novas oportunidades.")
             aceite_submetido = True
 
-    # Se quiser ocultar o formulário após aceite, basta colocar um return
     if aceite_submetido:
         st.stop()
 
@@ -72,8 +73,11 @@ def salvar_aceite(os_id, profissional, telefone, aceitou, origem=None):
     df.to_excel(ACEITES_FILE, index=False)
 
 aceite_os = st.query_params.get("aceite", None)
+origem_aceite = st.query_params.get("origem", None)
+
 if aceite_os:
-    exibe_formulario_aceite(aceite_os)
+    # Passe a origem para o formulário de aceite
+    exibe_formulario_aceite(aceite_os, origem=origem_aceite)
     st.stop()
 
 def traduzir_dia_semana(date_obj):
@@ -963,6 +967,10 @@ with tabs[3]:
 
         df_aceites = pd.read_excel(ACEITES_FILE)
         df_rotas = pd.read_excel(ROTAS_FILE, sheet_name="Rotas")
+
+        df_aceites["OS"] = df_aceites["OS"].astype(str).str.strip()
+        df_rotas["OS"] = df_rotas["OS"].astype(str).str.strip()
+
         df_aceites_completo = pd.merge(
             df_aceites, df_rotas[
                 ["OS", "CPF_CNPJ", "Nome Cliente", "Data 1", "Serviço", "Plano",
@@ -1259,3 +1267,5 @@ with tabs[5]:
                 "Se tiver interesse, por favor, nos avise!"
             )
             st.text_area("Mensagem WhatsApp", value=mensagem, height=260)
+
+
