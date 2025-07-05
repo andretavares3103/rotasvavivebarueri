@@ -762,6 +762,35 @@ import os
 import json
 import pandas as pd
 
+# Tente configurar o locale (pode ser ignorado se não funcionar)
+try:
+    locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')
+except:
+    pass
+
+def formatar_data_portugues(data):
+    dias_pt = {
+        "Monday": "segunda-feira",
+        "Tuesday": "terça-feira",
+        "Wednesday": "quarta-feira",
+        "Thursday": "quinta-feira",
+        "Friday": "sexta-feira",
+        "Saturday": "sábado",
+        "Sunday": "domingo"
+    }
+    if pd.isnull(data) or data == "":
+        return ""
+    try:
+        dt = pd.to_datetime(data, dayfirst=True, errors='coerce')
+        if pd.isnull(dt):
+            return str(data)
+        dia_semana_en = dt.strftime("%A")
+        dia_semana_pt = dias_pt.get(dia_semana_en, dia_semana_en)
+        return f"{dia_semana_pt}, {dt.strftime('%d/%m/%Y')}"
+    except Exception:
+        return str(data)
+
+
 PORTAL_EXCEL = "portal_atendimentos_clientes.xlsx"
 PORTAL_OS_LIST = "portal_atendimentos_os_list.json"
 
@@ -816,7 +845,6 @@ if not st.session_state.admin_autenticado:
             os_list = json.load(f)
         df = df[~df["OS"].isna()]  # remove linhas totalmente vazias de OS
         df = df[pd.to_numeric(df["OS"], errors="coerce").isin(os_list)]
-
         if df.empty:
             st.info("Nenhum atendimento disponível.")
         else:
@@ -826,6 +854,7 @@ if not st.session_state.admin_autenticado:
                 nome_cliente = row.get("Cliente", "")
                 bairro = row.get("Bairro", "")
                 data = row.get("Data 1", "")
+                data_pt = formatar_data_portugues(data)
                 hora_entrada = row.get("Hora de entrada", "")
                 hora_servico = row.get("Horas de serviço", "")
                 referencia = row.get("Ponto de Referencia", "")
@@ -850,7 +879,7 @@ if not st.session_state.admin_autenticado:
                             <b style="color:#00008B;margin-left:24px">Bairro:</b> <span>{bairro}</span>
                         </div>
                         <div style="font-size:0.95em; color:#00008B;">
-                            <b>Data:</b> <span>{data}</span><br>
+                            <b>Data:</b> <span>{data_pt}</span><br>
                             <b>Hora de entrada:</b> <span>{hora_entrada}</span><br>
                             <b>Horas de serviço:</b> <span>{hora_servico}</span><br>
                             <b>Ponto de Referência:</b> <span>{referencia if referencia and referencia != 'nan' else '-'}</span>
@@ -961,6 +990,15 @@ with tabs[2]:
 
 
 with tabs[3]:
+    if "atualizar_aceites" not in st.session_state:
+        st.session_state.atualizar_aceites = False
+
+    if st.button("🔄 Atualizar aceites"):
+        st.session_state.atualizar_aceites = not st.session_state.atualizar_aceites
+        st.rerun()
+
+    # ... todo o código atual da aba ...
+
 
 
     if os.path.exists(ACEITES_FILE) and os.path.exists(ROTAS_FILE):
@@ -1028,6 +1066,10 @@ with tabs[3]:
         cliente_sel = st.selectbox("Filtrar por cliente", options=["Todos"] + list(clientes), key="cliente_aceite")
         profissionais = df_aceites_completo["Profissional"].dropna().unique() if "Profissional" in df_aceites_completo else []
         profissional_sel = st.selectbox("Filtrar por profissional", options=["Todos"] + list(profissionais), key="prof_aceite")
+        # Gera lista de OS válidas
+        os_validos = df_aceites_completo["OS"].dropna().astype(str).unique()
+        os_sel = st.selectbox("Filtrar por OS", options=["Todos"] + list(os_validos), key="os_aceite")
+
         df_aceites_filt = df_aceites_completo.copy()
         if data_sel != "Todos":
             df_aceites_filt = df_aceites_filt[df_aceites_filt["Data 1"].dt.date.astype(str) == data_sel]
@@ -1035,6 +1077,9 @@ with tabs[3]:
             df_aceites_filt = df_aceites_filt[df_aceites_filt["Nome Cliente"] == cliente_sel]
         if profissional_sel != "Todos" and "Profissional" in df_aceites_filt:
             df_aceites_filt = df_aceites_filt[df_aceites_filt["Profissional"] == profissional_sel]
+        if os_sel != "Todos":
+            df_aceites_filt = df_aceites_filt[df_aceites_filt["OS"].astype(str) == os_sel]
+
         st.dataframe(df_aceites_filt, use_container_width=True)
         output = io.BytesIO()
         df_aceites_filt.to_excel(output, index=False)
@@ -1063,33 +1108,6 @@ with tabs[3]:
 
 import json
 import urllib.parse
-# Tente configurar o locale (pode ser ignorado se não funcionar)
-try:
-    locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')
-except:
-    pass
-
-def formatar_data_portugues(data):
-    dias_pt = {
-        "Monday": "segunda-feira",
-        "Tuesday": "terça-feira",
-        "Wednesday": "quarta-feira",
-        "Thursday": "quinta-feira",
-        "Friday": "sexta-feira",
-        "Saturday": "sábado",
-        "Sunday": "domingo"
-    }
-    if pd.isnull(data) or data == "":
-        return ""
-    try:
-        dt = pd.to_datetime(data, dayfirst=True, errors='coerce')
-        if pd.isnull(dt):
-            return str(data)
-        dia_semana_en = dt.strftime("%A")
-        dia_semana_pt = dias_pt.get(dia_semana_en, dia_semana_en)
-        return f"{dia_semana_pt}, {dt.strftime('%d/%m/%Y')}"
-    except Exception:
-        return str(data)
 
 
 with tabs[0]:
@@ -1176,7 +1194,6 @@ with tabs[0]:
             # Só exibe OS selecionadas
             df = df[~df["OS"].isna()]  # remove linhas totalmente vazias de OS
             df = df[pd.to_numeric(df["OS"], errors="coerce").isin(os_list)]
-
             if df.empty:
                 st.info("Nenhum atendimento disponível.")
             else:
