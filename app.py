@@ -1070,15 +1070,27 @@ except:
     pass
 
 def formatar_data_portugues(data):
+    dias_pt = {
+        "Monday": "segunda-feira",
+        "Tuesday": "terça-feira",
+        "Wednesday": "quarta-feira",
+        "Thursday": "quinta-feira",
+        "Friday": "sexta-feira",
+        "Saturday": "sábado",
+        "Sunday": "domingo"
+    }
     if pd.isnull(data) or data == "":
         return ""
     try:
         dt = pd.to_datetime(data, dayfirst=True, errors='coerce')
         if pd.isnull(dt):
             return str(data)
-        return dt.strftime("%A, %d/%m/%Y").capitalize()
+        dia_semana_en = dt.strftime("%A")
+        dia_semana_pt = dias_pt.get(dia_semana_en, dia_semana_en)
+        return f"{dia_semana_pt}, {dt.strftime('%d/%m/%Y')}"
     except Exception:
         return str(data)
+
 
 with tabs[0]:
     st.markdown("""
