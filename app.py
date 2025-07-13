@@ -153,7 +153,7 @@ def padronizar_cpf_cnpj(coluna):
     return (
         coluna.astype(str)
         .str.replace(r'\D', '', regex=True)
-        .str.zfill(11)
+        .str.zfill(14)
         .str.strip()
     )
 
@@ -412,6 +412,10 @@ def pipeline(file_path, output_dir):
     df_distancias_alerta.to_pickle('df_distancias_alerta.pkl')
     matriz_resultado_corrigida = []
     preferidas_alocadas_dia = dict()
+
+    debug_lista = []
+
+    
     for _, atendimento in df_atendimentos_futuros_validos.iterrows():
         data_atendimento = atendimento["Data 1"].date()
         if data_atendimento not in preferidas_alocadas_dia:
@@ -432,6 +436,7 @@ def pipeline(file_path, output_dir):
             df_bloqueio_completo[df_bloqueio_completo["CPF_CNPJ"] == cpf]["ID Prestador"]
             .astype(str).str.strip().tolist()
         )
+        
         linha = {
             "OS": os_id,
             "CPF_CNPJ": cpf,
@@ -466,6 +471,8 @@ def pipeline(file_path, output_dir):
         )
         utilizados = set()
         col = 1
+        
+        # 1️⃣ Preferência do Cliente
         preferencia_cliente_df = df_preferencias_completo[df_preferencias_completo["CPF_CNPJ"] == cpf]
         preferida_id = None
         if not preferencia_cliente_df.empty:
@@ -513,16 +520,17 @@ def pipeline(file_path, output_dir):
                 utilizados.add(preferida_id)
                 preferidas_alocadas_dia[data_atendimento].add(preferida_id)
                 col += 1
-        df_candidatos = df_profissionais[
-            ~df_profissionais["ID Prestador"].astype(str).str.strip().isin(bloqueados)
-        ].copy()
+        
+        # 2️⃣ Mais atendeu o cliente
         df_mais_atendeu = df_cliente_prestador[df_cliente_prestador["CPF_CNPJ"] == cpf]
         if not df_mais_atendeu.empty:
             mais_atend = df_mais_atendeu["Qtd Atendimentos Cliente-Prestador"].max()
             mais_atendeu_ids = df_mais_atendeu[df_mais_atendeu["Qtd Atendimentos Cliente-Prestador"] == mais_atend]["ID Prestador"]
             for id_ in mais_atendeu_ids:
                 id_prof = str(id_)
-                if id_prof in utilizados or id_prof in preferidas_alocadas_dia[data_atendimento]:
+                if id_prof in utilizados or id_prof in preferidas_alocadas_dia[data_atendimento] or id_prof in bloqueados:
+                    continue
+                if id_prof in preferidas_alocadas_dia[data_atendimento] and id_prof not in df_queridinhos["ID Prestador"].astype(str).values:
                     continue
                 prof = df_profissionais[df_profissionais["ID Prestador"].astype(str).str.strip() == id_prof]
                 if not prof.empty:
@@ -546,12 +554,20 @@ def pipeline(file_path, output_dir):
                         )
                         linha[f"Critério Utilizado {col}"] = "Mais atendeu o cliente"
                         utilizados.add(id_prof)
+                        if id_prof not in df_queridinhos["ID Prestador"].astype(str).values:
+                            preferidas_alocadas_dia[data_atendimento].add(id_prof)
                         col += 1
+        
+        # 3️⃣ Último profissional que atendeu
         df_hist_cliente = df_historico_60_dias[df_historico_60_dias["CPF_CNPJ"] == cpf]
         if not df_hist_cliente.empty:
             df_hist_cliente = df_hist_cliente.sort_values("Data 1", ascending=False)
             ultimo_prof_id = str(df_hist_cliente["ID Prestador"].iloc[0])
-            if ultimo_prof_id not in utilizados and ultimo_prof_id not in bloqueados and ultimo_prof_id not in preferidas_alocadas_dia[data_atendimento]:
+            if (
+                ultimo_prof_id not in utilizados
+                and ultimo_prof_id not in bloqueados
+                and (ultimo_prof_id not in preferidas_alocadas_dia[data_atendimento] or ultimo_prof_id in df_queridinhos["ID Prestador"].astype(str).values)
+            ):
                 prof = df_profissionais[df_profissionais["ID Prestador"].astype(str).str.strip() == ultimo_prof_id]
                 if not prof.empty:
                     lat_prof = prof.iloc[0]["Latitude Profissional"]
@@ -574,11 +590,15 @@ def pipeline(file_path, output_dir):
                         )
                         linha[f"Critério Utilizado {col}"] = "Último profissional que atendeu"
                         utilizados.add(ultimo_prof_id)
+                        if ultimo_prof_id not in df_queridinhos["ID Prestador"].astype(str).values:
+                            preferidas_alocadas_dia[data_atendimento].add(ultimo_prof_id)
                         col += 1
+        
+        # 4️⃣ Profissionais preferenciais (queridinhos): PODE repetir no mesmo dia!
         if not df_queridinhos.empty:
             for _, qrow in df_queridinhos.iterrows():
                 queridinha_id = str(qrow["ID Prestador"]).strip()
-                if queridinha_id in utilizados or queridinha_id in bloqueados or queridinha_id in preferidas_alocadas_dia[data_atendimento]:
+                if queridinha_id in utilizados or queridinha_id in bloqueados:
                     continue
                 prof = df_profissionais[df_profissionais["ID Prestador"].astype(str).str.strip() == queridinha_id]
                 if not prof.empty:
@@ -604,12 +624,15 @@ def pipeline(file_path, output_dir):
                             )
                             linha[f"Critério Utilizado {col}"] = "Profissional preferencial da plataforma (até 5 km)"
                             utilizados.add(queridinha_id)
+                            # NÃO adiciona em preferidas_alocadas_dia[data_atendimento]
                             col += 1
+        
+        # 5️⃣ Mais próxima geograficamente
         dist_cand = df_distancias[(df_distancias["CPF_CNPJ"] == cpf)].copy()
         dist_cand = dist_cand[~dist_cand["ID Prestador"].isin(utilizados | set(bloqueados) | preferidas_alocadas_dia[data_atendimento])]
         dist_cand = dist_cand.sort_values("Distância (km)")
         for _, dist_row in dist_cand.iterrows():
-            if col > 15:
+            if col > 10:
                 break
             prof = df_profissionais[df_profissionais["ID Prestador"].astype(str).str.strip() == str(dist_row["ID Prestador"])]
             if prof.empty:
@@ -620,8 +643,12 @@ def pipeline(file_path, output_dir):
             lon_prof = prof.iloc[0]["Longitude Profissional"]
             if not (pd.notnull(lat_prof) and pd.notnull(lon_prof)):
                 continue
-            qtd_atend_cliente = int(df_cliente_prestador[(df_cliente_prestador["CPF_CNPJ"] == cpf) & (df_cliente_prestador["ID Prestador"] == str(dist_row["ID Prestador"]))]["Qtd Atendimentos Cliente-Prestador"].iloc[0]) if not df_cliente_prestador[(df_cliente_prestador["CPF_CNPJ"] == cpf) & (df_cliente_prestador["ID Prestador"] == str(dist_row["ID Prestador"]))].empty else 0
-            qtd_atend_total = int(df_qtd_por_prestador[df_qtd_por_prestador["ID Prestador"] == str(dist_row["ID Prestador"])]["Qtd Atendimentos Prestador"].iloc[0]) if not df_qtd_por_prestador[df_qtd_por_prestador["ID Prestador"] == str(dist_row["ID Prestador"])].empty else 0
+            # NÃO permite repetir no mesmo dia, exceto se for queridinho
+            prof_id = str(dist_row["ID Prestador"])
+            if prof_id in preferidas_alocadas_dia[data_atendimento] and prof_id not in df_queridinhos["ID Prestador"].astype(str).values:
+                continue
+            qtd_atend_cliente = int(df_cliente_prestador[(df_cliente_prestador["CPF_CNPJ"] == cpf) & (df_cliente_prestador["ID Prestador"] == prof_id)]["Qtd Atendimentos Cliente-Prestador"].iloc[0]) if not df_cliente_prestador[(df_cliente_prestador["CPF_CNPJ"] == cpf) & (df_cliente_prestador["ID Prestador"] == prof_id)].empty else 0
+            qtd_atend_total = int(df_qtd_por_prestador[df_qtd_por_prestador["ID Prestador"] == prof_id]["Qtd Atendimentos Prestador"].iloc[0]) if not df_qtd_por_prestador[df_qtd_por_prestador["ID Prestador"] == prof_id].empty else 0
             distancia = float(dist_row["Distância (km)"])
             criterio = f"cliente: {qtd_atend_cliente} | total: {qtd_atend_total} — {distancia:.2f} km"
             linha[f"Classificação da Profissional {col}"] = col
@@ -636,11 +663,15 @@ def pipeline(file_path, output_dir):
                 obs_prestador=obs_prestador
             )
             linha[f"Critério Utilizado {col}"] = "Mais próxima geograficamente"
-            utilizados.add(str(dist_row["ID Prestador"]))
+            utilizados.add(prof_id)
+            if prof_id not in df_queridinhos["ID Prestador"].astype(str).values:
+                preferidas_alocadas_dia[data_atendimento].add(prof_id)
             col += 1
+        
+        # 6️⃣ Sumidinhos/baixa disponibilidade
         sumidinhos_para_incluir = [sum_id for sum_id in df_sumidinhos["ID Prestador"].astype(str) if sum_id in utilizados]
         for sum_id in sumidinhos_para_incluir:
-            if col > 20:
+            if col > 10:
                 break
             if sum_id in bloqueados or sum_id in preferidas_alocadas_dia[data_atendimento]:
                 continue
@@ -668,13 +699,18 @@ def pipeline(file_path, output_dir):
                 obs_prestador=obs_prestador
             )
             linha[f"Critério Utilizado {col}"] = "Baixa Disponibilidade"
+            utilizados.add(sum_id)
+            if sum_id not in df_queridinhos["ID Prestador"].astype(str).values:
+                preferidas_alocadas_dia[data_atendimento].add(sum_id)
             col += 1
-        if col <= 20:
+        
+        # 7️⃣ Complemento: Mais próximos (caso não tenha batido 20 colunas)
+        if col <= 10:
             dist_restantes = df_distancias[(df_distancias["CPF_CNPJ"] == cpf)].copy()
             dist_restantes = dist_restantes[~dist_restantes["ID Prestador"].isin(utilizados | set(bloqueados) | preferidas_alocadas_dia[data_atendimento])]
             dist_restantes = dist_restantes.sort_values("Distância (km)")
             for _, dist_row in dist_restantes.iterrows():
-                if col > 20:
+                if col > 10:
                     break
                 prof = df_profissionais[df_profissionais["ID Prestador"].astype(str).str.strip() == str(dist_row["ID Prestador"])]
                 if prof.empty:
@@ -685,8 +721,11 @@ def pipeline(file_path, output_dir):
                 lon_prof = prof.iloc[0]["Longitude Profissional"]
                 if not (pd.notnull(lat_prof) and pd.notnull(lon_prof)):
                     continue
-                qtd_atend_cliente = int(df_cliente_prestador[(df_cliente_prestador["CPF_CNPJ"] == cpf) & (df_cliente_prestador["ID Prestador"] == str(dist_row["ID Prestador"]))]["Qtd Atendimentos Cliente-Prestador"].iloc[0]) if not df_cliente_prestador[(df_cliente_prestador["CPF_CNPJ"] == cpf) & (df_cliente_prestador["ID Prestador"] == str(dist_row["ID Prestador"]))].empty else 0
-                qtd_atend_total = int(df_qtd_por_prestador[df_qtd_por_prestador["ID Prestador"] == str(dist_row["ID Prestador"])]["Qtd Atendimentos Prestador"].iloc[0]) if not df_qtd_por_prestador[df_qtd_por_prestador["ID Prestador"] == str(dist_row["ID Prestador"])].empty else 0
+                prof_id = str(dist_row["ID Prestador"])
+                if prof_id in preferidas_alocadas_dia[data_atendimento] and prof_id not in df_queridinhos["ID Prestador"].astype(str).values:
+                    continue
+                qtd_atend_cliente = int(df_cliente_prestador[(df_cliente_prestador["CPF_CNPJ"] == cpf) & (df_cliente_prestador["ID Prestador"] == prof_id)]["Qtd Atendimentos Cliente-Prestador"].iloc[0]) if not df_cliente_prestador[(df_cliente_prestador["CPF_CNPJ"] == cpf) & (df_cliente_prestador["ID Prestador"] == prof_id)].empty else 0
+                qtd_atend_total = int(df_qtd_por_prestador[df_qtd_por_prestador["ID Prestador"] == prof_id]["Qtd Atendimentos Prestador"].iloc[0]) if not df_qtd_por_prestador[df_qtd_por_prestador["ID Prestador"] == prof_id].empty else 0
                 distancia = float(dist_row["Distância (km)"])
                 criterio = f"cliente: {qtd_atend_cliente} | total: {qtd_atend_total} — {distancia:.2f} km"
                 linha[f"Classificação da Profissional {col}"] = col
@@ -701,8 +740,17 @@ def pipeline(file_path, output_dir):
                     obs_prestador=obs_prestador
                 )
                 linha[f"Critério Utilizado {col}"] = "Mais próxima geograficamente (complemento)"
+                utilizados.add(prof_id)
+                if prof_id not in df_queridinhos["ID Prestador"].astype(str).values:
+                    preferidas_alocadas_dia[data_atendimento].add(prof_id)
                 col += 1
+
+
         matriz_resultado_corrigida.append(linha)
+
+
+
+    
     df_matriz_rotas = pd.DataFrame(matriz_resultado_corrigida)
     app_url = "https://rotasvavivebarueri.streamlit.app/"
     df_matriz_rotas["Mensagem Padrão"] = df_matriz_rotas.apply(
@@ -711,7 +759,7 @@ def pipeline(file_path, output_dir):
     )
 
     
-    for i in range(1, 21):
+    for i in range(1, 11):
         if f"Classificação da Profissional {i}" not in df_matriz_rotas.columns:
             df_matriz_rotas[f"Classificação da Profissional {i}"] = pd.NA
         if f"Critério {i}" not in df_matriz_rotas.columns:
@@ -727,7 +775,7 @@ def pipeline(file_path, output_dir):
         "Duração do Serviço", "Hora de entrada","Observações prestador", "Ponto de Referencia", "Mensagem Padrão"
     ]
     prestador_cols = []
-    for i in range(1, 21):
+    for i in range(1, 11):
         prestador_cols.extend([
             f"Classificação da Profissional {i}",
             f"Critério {i}",
@@ -935,33 +983,58 @@ if not st.session_state.admin_autenticado:
 tabs = st.tabs(["Portal Atendimentos", "Upload de Arquivo", "Matriz de Rotas", "Aceites", "Profissionais Próximos", "Mensagem Rápida"])
 
 with tabs[1]:
+    if "excel_processado" not in st.session_state:
+        st.session_state.excel_processado = False
+    if "nome_arquivo_processado" not in st.session_state:
+        st.session_state.nome_arquivo_processado = None
 
-    
     uploaded_file = st.file_uploader("Selecione o arquivo Excel original", type=["xlsx"])
-    if uploaded_file:
-        with st.spinner("Processando... Isso pode levar alguns segundos."):
-            with tempfile.TemporaryDirectory() as tempdir:
-                temp_path = os.path.join(tempdir, uploaded_file.name)
-                with open(temp_path, "wb") as f:
-                    f.write(uploaded_file.read())
-                try:
-                    excel_path = pipeline(temp_path, tempdir)
-                    if os.path.exists(excel_path):
-                        st.success("Processamento finalizado com sucesso!")
-                        st.download_button(
-                            label="📥 Baixar Excel consolidado",
-                            data=open(excel_path, "rb").read(),
-                            file_name="rotas_bh_dados_tratados_completos.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            key="download_excel_consolidado"
-                        )
+
+    # Só processa se o arquivo mudou ou nunca foi processado
+    if uploaded_file is not None:
+        if (
+            not st.session_state.excel_processado
+            or st.session_state.nome_arquivo_processado != uploaded_file.name
+        ):
+            with st.spinner("Processando... Isso pode levar alguns segundos."):
+                with tempfile.TemporaryDirectory() as tempdir:
+                    temp_path = os.path.join(tempdir, uploaded_file.name)
+                    with open(temp_path, "wb") as f:
+                        f.write(uploaded_file.read())
+                    try:
+                        excel_path = pipeline(temp_path, tempdir)
+                        if os.path.exists(excel_path):
+                            st.success("Processamento finalizado com sucesso!")
+                            st.download_button(
+                                label="📥 Baixar Excel consolidado",
+                                data=open(excel_path, "rb").read(),
+                                file_name="rotas_bh_dados_tratados_completos.xlsx",
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                key="download_excel_consolidado"
+                            )
+                            import shutil
+                            shutil.copy(excel_path, "rotas_bh_dados_tratados_completos.xlsx")
+                            st.session_state.excel_processado = True
+                            st.session_state.nome_arquivo_processado = uploaded_file.name
+                        else:
+                            st.error("Arquivo final não encontrado. Ocorreu um erro no pipeline.")
+                    except Exception as e:
+                        st.error(f"Erro no processamento: {e}") 
+        else:
+            # Já processado: só mostra o botão de download
+            if os.path.exists("rotas_bh_dados_tratados_completos.xlsx"):
+                st.download_button(
+                    label="📥 Baixar Excel consolidado",
+                    data=open("rotas_bh_dados_tratados_completos.xlsx", "rb").read(),
+                    file_name="rotas_bh_dados_tratados_completos.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="download_excel_consolidado"
+                )
+    else:
+        # Resetar caso usuário remova o arquivo
+        st.session_state.excel_processado = False
+        st.session_state.nome_arquivo_processado = None
     
-                        import shutil
-                        shutil.copy(excel_path, "rotas_bh_dados_tratados_completos.xlsx")
-                    else:
-                        st.error("Arquivo final não encontrado. Ocorreu um erro no pipeline.")
-                except Exception as e:
-                    st.error(f"Erro no processamento: {e}")    
 
 with tabs[2]:
     
@@ -972,7 +1045,7 @@ with tabs[2]:
         clientes = df_rotas["Nome Cliente"].dropna().unique()
         cliente_sel = st.selectbox("Filtrar por cliente", options=["Todos"] + list(clientes), key="cliente_rotas")
         profissionais = []
-        for i in range(1, 21):
+        for i in range(1, 11):
             profissionais.extend(df_rotas[f"Nome Prestador {i}"].dropna().unique())
         profissionais = list(set([p for p in profissionais if isinstance(p, str)]))
         profissional_sel = st.selectbox("Filtrar por profissional", options=["Todos"] + profissionais, key="prof_rotas")
@@ -983,7 +1056,7 @@ with tabs[2]:
             df_rotas_filt = df_rotas_filt[df_rotas_filt["Nome Cliente"] == cliente_sel]
         if profissional_sel != "Todos":
             mask = False
-            for i in range(1, 21):
+            for i in range(1, 11):
                 mask |= (df_rotas_filt[f"Nome Prestador {i}"] == profissional_sel)
             df_rotas_filt = df_rotas_filt[mask]
         st.dataframe(df_rotas_filt, use_container_width=True)
@@ -1150,13 +1223,32 @@ with tabs[0]:
                 st.error("Senha incorreta.")
 
         if st.session_state.admin_autenticado_portal:
+            # Permite upload OU reutilização do arquivo salvo
+            if "portal_file_buffer" not in st.session_state:
+                st.session_state.portal_file_buffer = None
+        
             uploaded_file = st.file_uploader("Faça upload do arquivo Excel", type=["xlsx"], key="portal_upload")
+            use_last_file = False
+        
             if uploaded_file:
+                # Salva arquivo na sessão e disco
+                st.session_state.portal_file_buffer = uploaded_file.getbuffer()
                 with open(PORTAL_EXCEL, "wb") as f:
-                    f.write(uploaded_file.getbuffer())
+                    f.write(st.session_state.portal_file_buffer)
                 st.success("Arquivo salvo! Escolha agora os atendimentos que ficarão visíveis.")
                 df = pd.read_excel(PORTAL_EXCEL, sheet_name="Clientes")
-
+            elif st.session_state.portal_file_buffer:
+                # Usa o arquivo já carregado na sessão
+                with open(PORTAL_EXCEL, "wb") as f:
+                    f.write(st.session_state.portal_file_buffer)
+                df = pd.read_excel(PORTAL_EXCEL, sheet_name="Clientes")
+            elif os.path.exists(PORTAL_EXCEL):
+                # Usa o arquivo salvo no disco
+                df = pd.read_excel(PORTAL_EXCEL, sheet_name="Clientes")
+            else:
+                df = None
+        
+            if df is not None:
                 # ------- FILTRO POR DATA1 -------
                 datas_disponiveis = sorted(df["Data 1"].dropna().unique())
                 datas_formatadas = [str(pd.to_datetime(d).date()) for d in datas_disponiveis]
@@ -1168,8 +1260,7 @@ with tabs[0]:
                 )
                 if datas_selecionadas:
                     df = df[df["Data 1"].astype(str).apply(lambda d: str(pd.to_datetime(d).date()) in datas_selecionadas)]
-
-
+        
                 # Monta opções com OS, Cliente, Serviço e Bairro
                 opcoes = [
                     f'OS {int(row.OS)} | {row["Cliente"]} | {row.get("Serviço", "")} | {row.get("Bairro", "")}'
@@ -1325,5 +1416,4 @@ with tabs[5]:
                 "Se tiver interesse, por favor, nos avise!"
             )
             st.text_area("Mensagem WhatsApp", value=mensagem, height=260)
-
 
