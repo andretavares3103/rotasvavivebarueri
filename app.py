@@ -18,7 +18,7 @@ PORTAL_OS_LIST = "portal_atendimentos_os_list.json" # ou o nome correto da lista
 st.set_page_config(page_title="BARUERI || Otimização Rotas Vavivê", layout="wide")
 
 ACEITES_FILE = "aceites.xlsx"
-ROTAS_FILE = "rotas_bh_dados_tratados_completos.xlsx"
+ROTAS_FILE = "rotas_BARUERI_dados_tratados_completos.xlsx"
 
 def enviar_email_aceite_gmail(os_id, profissional, telefone):
     remetente = "andre.mtavares3@gmail.com"  # <-- seu e-mail de envio
@@ -1061,7 +1061,7 @@ def pipeline(file_path, output_dir):
         ])
     df_matriz_rotas = df_matriz_rotas[base_cols + prestador_cols]
     
-    final_path = os.path.join(output_dir, "rotas_bh_dados_tratados_completos.xlsx")
+    final_path = os.path.join(output_dir, "rotas_BARUERI_dados_tratados_completos.xlsx")
     with pd.ExcelWriter(final_path, engine='xlsxwriter') as writer:
         df_matriz_rotas.to_excel(writer, sheet_name="Rotas", index=False)
         df_atendimentos.to_excel(writer, sheet_name="Atendimentos", index=False)
@@ -1327,12 +1327,12 @@ with tabs[1]:
                             st.download_button(
                                 label="📥 Baixar Excel consolidado",
                                 data=open(excel_path, "rb").read(),
-                                file_name="rotas_bh_dados_tratados_completos.xlsx",
+                                file_name="rotas_BARUERI_dados_tratados_completos.xlsx",
                                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                                 key="download_excel_consolidado"
                             )
                             import shutil
-                            shutil.copy(excel_path, "rotas_bh_dados_tratados_completos.xlsx")
+                            shutil.copy(excel_path, "rotas_BARUERI_dados_tratados_completos.xlsx")
                             st.session_state.excel_processado = True
                             st.session_state.nome_arquivo_processado = uploaded_file.name
                         else:
@@ -1341,11 +1341,11 @@ with tabs[1]:
                         st.error(f"Erro no processamento: {e}") 
         else:
             # Já processado: só mostra o botão de download
-            if os.path.exists("rotas_bh_dados_tratados_completos.xlsx"):
+            if os.path.exists("rotas_BARUERI_dados_tratados_completos.xlsx"):
                 st.download_button(
                     label="📥 Baixar Excel consolidado",
-                    data=open("rotas_bh_dados_tratados_completos.xlsx", "rb").read(),
-                    file_name="rotas_bh_dados_tratados_completos.xlsx",
+                    data=open("rotas_BARUERI_dados_tratados_completos.xlsx", "rb").read(),
+                    file_name="rotas_BARUERI_dados_tratados_completos.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     key="download_excel_consolidado"
                 )
@@ -1382,7 +1382,7 @@ with tabs[2]:
         st.download_button(
             label="📥 Baixar Excel consolidado",
             data=open(ROTAS_FILE, "rb").read(),
-            file_name="rotas_bh_dados_tratados_completos.xlsx",
+            file_name="rotas_BARUERI_dados_tratados_completos.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
     else:
@@ -1836,4 +1836,5 @@ with tabs[6]:
             total_linhas = len(df_view)
             divergentes = int(df_view["Divergência"].sum()) if "Divergência" in df_view else 0
             st.caption(f"Linhas exibidas: {total_linhas} | Divergências: {divergentes}")
+
 
