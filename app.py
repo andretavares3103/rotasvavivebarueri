@@ -483,7 +483,7 @@ def pipeline(file_path, output_dir):
     # PARÂMETROS
     # ============================
     DELTA_KM = 1.0
-    RAIO_QUERIDINHOS = 5.0
+    RAIO_QUERIDINHOS = 8.0
     GARANTIR_COTA_QUERIDINHO = True
     EVITAR_REPETIR_EM_LISTAS_NO_DIA = True
     RECALC_DIST_ON_THE_FLY = False  # aqui vamos usar df_distancias como fonte de verdade
@@ -1836,3 +1836,4 @@ with tabs[6]:
             total_linhas = len(df_view)
             divergentes = int(df_view["Divergência"].sum()) if "Divergência" in df_view else 0
             st.caption(f"Linhas exibidas: {total_linhas} | Divergências: {divergentes}")
+
