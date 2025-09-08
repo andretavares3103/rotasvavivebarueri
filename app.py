@@ -1034,7 +1034,7 @@ def pipeline(file_path, output_dir):
     # DataFrame final de Rotas + Excel
     # ============================
     df_matriz_rotas = pd.DataFrame(matriz_resultado_corrigida)
-    app_url = "https://rotasvavivebarueribarueri.streamlit.app/"
+    app_url = "https://rotasvavivebarueri.streamlit.app/"
     df_matriz_rotas["Mensagem Padrão"] = df_matriz_rotas.apply(
         lambda row: f"👉 [Clique aqui para validar seu aceite]({app_url}?aceite={row['OS']})\n\n{row['Mensagem Padrão']}",
         axis=1
@@ -1720,7 +1720,7 @@ with tabs[5]:
     hora_entrada = st.text_input("Hora de entrada (ex: 08:00)")
     duracao = st.text_input("Duração do atendimento (ex: 2h)")
 
-    app_url = "https://rotasvavivebarueribarueri.streamlit.app"  # sua URL real
+    app_url = "https://rotasvavivebarueri.streamlit.app"  # sua URL real
     if os_id.strip():
         link_aceite = f"{app_url}?aceite={os_id}&origem=mensagem_rapida"
     else:
@@ -1836,4 +1836,5 @@ with tabs[6]:
             total_linhas = len(df_view)
             divergentes = int(df_view["Divergência"].sum()) if "Divergência" in df_view else 0
             st.caption(f"Linhas exibidas: {total_linhas} | Divergências: {divergentes}")
+
 
