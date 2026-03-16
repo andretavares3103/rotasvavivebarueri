@@ -9,11 +9,41 @@ from geopy.distance import geodesic
 import tempfile
 import io
 
+#TESTE GOOGLE SHEETS#
+import gspread
+from google.oauth2.service_account import Credentials
+from datetime import datetime
+
 import smtplib
 from email.mime.text import MIMEText
 
 PORTAL_EXCEL = "portal_atendimentos_clientes.xlsx"  # ou o nome correto do seu arquivo de clientes
 PORTAL_OS_LIST = "portal_atendimentos_os_list.json" # ou o nome correto da lista de OS (caso use JSON, por exemplo)
+
+
+
+#########TESTE GOOGLE SHEETS
+    def conectar_google_sheet():
+
+    scope = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive"
+    ]
+
+    creds = Credentials.from_service_account_file(
+        "credenciais_google.json",
+        scopes=scope
+    )
+
+    client = gspread.authorize(creds)
+
+    sheet = client.open("Aceites Rotas Vavive").sheet1
+
+    return sheet
+
+
+
+
 
 st.set_page_config(page_title="BELO HORIZONTE || Otimização Rotas Vavivê", layout="wide")
 
@@ -537,6 +567,11 @@ def pipeline(file_path, output_dir):
         tmp["_hora_tuple"] = tmp["Hora de entrada"].apply(_parse_hora)
         tmp["_dur"] = tmp["Duração do Serviço"]
         return tmp.sort_values(by=["_hora_tuple", "_dur"], ascending=[True, False])
+
+
+
+
+    
     
     # ============================
     # Pré-reservas por dia (preferidas)
@@ -1169,6 +1204,22 @@ def salvar_aceite(os_id, profissional, telefone, aceitou, origem=None):
     }
     df = pd.concat([df, pd.DataFrame([nova_linha])], ignore_index=True)
     df.to_excel(ACEITES_FILE, index=False)
+    # SALVAR TAMBÉM NA GOOGLE SHEET
+    try:
+        sheet = conectar_google_sheet()
+    
+        sheet.append_row([
+            os_id,
+            profissional,
+            telefone,
+            "Sim" if aceitou else "Não",
+            data,
+            dia_semana,
+            horario,
+            origem if origem else ""
+        ])
+    except Exception as e:
+        print("Erro ao salvar no Google Sheets:", e)
 
 # Controle de autenticação global
 if "admin_autenticado" not in st.session_state:
