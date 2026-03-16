@@ -23,23 +23,23 @@ PORTAL_OS_LIST = "portal_atendimentos_os_list.json" # ou o nome correto da lista
 
 
 #########TESTE GOOGLE SHEETS
-    def conectar_google_sheet():
+def conectar_google_sheet():
 
-    scope = [
-        "https://spreadsheets.google.com/feeds",
-        "https://www.googleapis.com/auth/drive"
-    ]
+scope = [
+    "https://spreadsheets.google.com/feeds",
+    "https://www.googleapis.com/auth/drive"
+]
 
-    creds = Credentials.from_service_account_file(
-        "credenciais_google.json",
-        scopes=scope
-    )
+creds = Credentials.from_service_account_file(
+    "credenciais_google.json",
+    scopes=scope
+)
 
-    client = gspread.authorize(creds)
+client = gspread.authorize(creds)
 
-    sheet = client.open("Aceites Rotas Vavive").sheet1
+sheet = client.open("Aceites Rotas Vavive").sheet1
 
-    return sheet
+return sheet
 
 
 
