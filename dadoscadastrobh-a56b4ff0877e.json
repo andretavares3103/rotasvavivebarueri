@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "dadoscadastrobh",
+  "private_key_id": "a56b4ff0877e1aa1c0d16f0ff4760028bc9602d4",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDRXh7Mba3QE9DP\nGPhVi4RKE2FeBal9StlhjQ8Vf2htyR+RkOV8nUlSaS1J65vSCpeaB0zQKBMGbHUo\n3wFIsvV7hKjMWD5b7878e92hSCSm4ZBlZS0BHpUgahEuZvxjG+/sg3EkbvX9GYZD\nAJAnjFayQ/9R6TlL7bnJtV9dqQk82cs4U9EJDfLeZN6IohMtinomMAK8XH4816+5\nVvqOhFQyur3qyQa+A3LMgjewLrDPWCZoszbNJpKtyrkQDNKVbUTQBoaE/xccMiIC\nIBjl5/2l/kyQgNydWOV2GZ8MXqk8Qw3ZnYHnA9gKUXzWqNAu6sRdXQesb4P8D4wX\nUNfq2znnAgMBAAECggEAYIppYjNa190jRjOJ4wxDslKQbaXnuvXmGdTM9Uk8Eo+Q\nhnNNVnJCaoVEFFdXkPlAYY5nLX6lEyu0tGVsNqUKi+umWB+ClasVAxhsoF9fQzI0\nfoSyRVdgRUOTa5WiYGLz9VfAtp+RvyTjY4bhcdME8QtoslD8EhZqumdvM4Vr1In1\nZLf2T9T4dgDqV3wBv5YYry9yXkAgJkfJGZPg9BFXRVBMwXtggYnhApb9hOqKTSgB\nvkLWXX3bMorofl79aA0WBTCCYgR6Wq80Nx6vl3vwvBfu+XNaOctQhK3JmGBXo/+Y\ndHwp9o5lZjzkbkOp1BEfoATvI/6FtppCoHCwo872HQKBgQDqX7Xq/lZJ8xKatX2W\nqdfGexne2VPcWxAv10WEfblvUI30JZ1nfDT9IG920LVaw78lqD/8CdIEP9orFKsu\n8voQkXCL9dshMmokcZxTVR9P4gt87CkB65UAfoK6IkJoCncaaZxEdPy/j35UrK7b\nhD+ZbedAfXrFCGbboRiJ43g2NQKBgQDkr7j6HdFjm1pTpVfsJiz3b82IIpk7DrdU\nKMuzCMwemyEeSEFFTxhC++2uje/MMqO3P3Bw/4AcNx7ja/C9ONEKZvKF/j07UmS4\nRTWhVQfsjPFMY0jgHE8eUGNFjeVgijS4g6yf1prjHzEmOy5P58kcwM24149ZvUB9\nX6U1I9mDKwKBgQDkeglN3EMiM+OfDe4wQcInqzm9FP+7gMp22NTcI/PxoAXCTCj2\nCQ9e84+1tCAXK1vbyfkWKjyiB90Wwj9etV8xZ5bf2fyUkCEJBffvBLxRk3q/fTk8\ntfu7T5kA+wThh9Iz3WCJG8KIu8nbobuUI4gcehdFtw1Hprkewhy5zxYRQQKBgHlX\nXBkqtS3bAqSbePmOkBGCu1XetduGRXRcaSlII7ahrYL559g0zbTNJCKYoYKB5CiZ\neroaeAmAnd0iKwzcFt8kHM9IRYkygMrdvkUqbxfu+SIFFGgF3V1CXkpLrkf5TVwS\nUghFwM1+gX+9qycu36FoFEBd8Gw3ZP6hP3Hg4csdAoGBAK9MmwL4CsnU0yhoVnEm\nILOitI6Bh3EKDJ7MowqVpPV0cyzdVkX4RgLq0rvYjfjy9wFJAw7J099vJH25vMbf\nWkuu4piffc/xrLf+S63C97u/6MLUtlgIYXIzc43GjlyldKUIuYL1K0CRir6fzcGC\nZZBiL/qBzJzIZXCMbXJnoYk2\n-----END PRIVATE KEY-----\n",
+  "client_email": "streamlit-rotas@dadoscadastrobh.iam.gserviceaccount.com",
+  "client_id": "103073652479785084029",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/streamlit-rotas%40dadoscadastrobh.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
