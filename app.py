@@ -1219,7 +1219,7 @@ def salvar_aceite(os_id, profissional, telefone, aceitou, origem=None):
             origem if origem else ""
         ])
     except Exception as e:
-        print("Erro ao salvar no Google Sheets:", e)
+        st.error(f"Erro ao salvar no Google Sheets: {e}")
 
 # Controle de autenticação global
 if "admin_autenticado" not in st.session_state:
@@ -1356,6 +1356,14 @@ if not st.session_state.admin_autenticado:
 tabs = st.tabs(["Portal Atendimentos", "Upload de Arquivo", "Matriz de Rotas", "Aceites", "Profissionais Próximos", "Mensagem Rápida", "Auditoria (Proximidade)"])
 
 with tabs[1]:
+    st.subheader("Teste conexão Google Sheets")
+
+    if st.button("TESTE GOOGLE SHEET"):
+        sheet = conectar_google_sheet()
+        sheet.append_row(["TESTE", "TESTE", "TESTE"])
+        st.success("Linha enviada!")
+
+    
     if "excel_processado" not in st.session_state:
         st.session_state.excel_processado = False
     if "nome_arquivo_processado" not in st.session_state:
