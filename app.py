@@ -10,7 +10,9 @@ import tempfile
 import io
 
 #TESTE GOOGLE SHEETS#
+import json
 import gspread
+import streamlit as st
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 
@@ -26,19 +28,23 @@ PORTAL_OS_LIST = "portal_atendimentos_os_list.json" # ou o nome correto da lista
 def conectar_google_sheet():
 
     scope = [
-        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive"
     ]
-    
-    creds = Credentials.from_service_account_file(
-        "dadoscadastrobh-a56b4ff0877e.json",
+
+    info = json.loads(st.secrets["gcp_service_account"]["json"])
+
+    creds = Credentials.from_service_account_info(
+        info,
         scopes=scope
     )
-    
+
     client = gspread.authorize(creds)
-    
-    sheet = client.open_by_key("1O7ceSXeLsVi71n1T_-TMJWJGqL_URYbk92-groPSKUE").sheet1
-    
+
+    sheet = client.open_by_key(
+        "1O7ceSXeLsVi71n1T_-TMJWJGqL_URYbk92-groPSKUE"
+    ).sheet1
+
     return sheet
 
 
