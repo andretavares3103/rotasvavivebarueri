@@ -31,7 +31,7 @@ def conectar_google_sheet():
     ]
     
     creds = Credentials.from_service_account_file(
-        "credenciais_google.json",
+        "dadoscadastrobh-a56b4ff0877e.json",
         scopes=scope
     )
     
